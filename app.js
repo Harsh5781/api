@@ -10,7 +10,7 @@ const methodOverride = require('method-override')
 const path = require('path')
 const ejsMate = require('ejs-mate')
 
-const dbURL = process.env.DB_URL
+const dbURL = process.env.DB_URL || 'mongodb://localhost:27017/shop'
 
 const port = process.env.PORT || 8000
 
@@ -27,7 +27,9 @@ const passport = require('passport')
 const localStrategy = require('passport-local')
 
 const session = require('express-session')
-// 'mongodb://localhost:27017/shop'
+
+const MongoDBStore = require("connect-mongo");
+
 mongoose.connect(dbURL)
 .then(()=>{
     console.log('Connected to database')
@@ -36,7 +38,19 @@ mongoose.connect(dbURL)
     console.log('Error', e)
 })
 
+const store = new MongoDBStore({
+    mongoUrl: dbURL,
+    secret: 'secretCode',
+    collectionName:'session',
+    touchAfter: 24 * 60 * 60
+});
+
+store.on("error", function (e) {
+    console.log("SESSION STORE ERROR", e)
+})
+
 const sessionDetail = {
+    store,
     secret: 'secretCode',
     saveUninitialized: true,
     resave:false,
@@ -69,6 +83,10 @@ app.use(methodOverride('_method'))
 app.use('/product/api', api)
 app.use('/product', product)
 app.use('/',user)
+
+app.get('/', (req, res)=>{
+    res.render('home')
+})
 
 
 app.listen(port, ()=>{
